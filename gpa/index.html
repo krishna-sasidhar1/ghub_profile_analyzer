@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitScope — GitHub Profile Analyzer</title>
+  <meta name="description" content="Analyze, compare and battle GitHub profiles. Explore repositories, languages, stars, and developer scores." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="nav-logo">
+      <i class="ph ph-git-branch"></i>
+      <span>GitScope</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tabAnalyze" onclick="switchMode('analyze')">
+        <i class="ph ph-magnifying-glass"></i><span>Analyze</span>
+      </button>
+      <button class="nav-tab" id="tabCompare" onclick="switchMode('compare')">
+        <i class="ph ph-scales"></i><span>Compare</span>
+      </button>
+      <button class="nav-tab battle-tab" id="tabBattle" onclick="switchMode('battle')">
+        <i class="ph ph-sword"></i><span>Battle</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===================== ANALYZE MODE ===================== -->
+  <section id="analyzeMode">
+    <div class="search-section">
+      <h1 class="logo">GitHub Profile Analyzer</h1>
+      <p class="subtitle">Explore any developer's public stats, languages, and insights.</p>
+      <div class="search-box">
+        <i class="ph ph-magnifying-glass search-icon"></i>
+        <input id="usernameInput" type="text" placeholder="Enter GitHub username…" autocomplete="off" />
+        <button id="searchBtn">Analyze</button>
+      </div>
+      <div class="error-message hidden" id="errorMessage">
+        <i class="ph ph-warning-circle"></i><span>User not found</span>
+      </div>
+    </div>
+
+    <div class="loading hidden" id="loading">
+      <div class="spinner"></div><p>Fetching profile…</p>
+    </div>
+
+    <div class="dashboard hidden" id="dashboard">
+      <!-- Profile Card -->
+      <div class="profile-card">
+        <div class="profile-header">
+          <img id="profileAvatar" class="avatar" src="" alt="Avatar" />
+          <div class="profile-info">
+            <h2 id="profileName"></h2>
+            <a id="profileUsername" href="#" target="_blank"></a>
+            <p id="profileBio" class="bio-text"></p>
+            <div class="profile-meta">
+              <span><i class="ph ph-users"></i><b id="followers"></b> followers</span>
+              <span><i class="ph ph-user-check"></i><b id="following"></b> following</span>
+              <span><i class="ph ph-map-pin"></i><span id="location"></span></span>
+              <span><i class="ph ph-book-bookmark"></i><b id="publicRepos"></b> repos</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="ph ph-star"></i></div>
+          <div class="stat-data"><span id="totalStars">0</span><label>Total Stars</label></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(46,160,67,.12);color:#3fb950"><i class="ph ph-git-fork"></i></div>
+          <div class="stat-data"><span id="totalForks">0</span><label>Total Forks</label></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(210,153,34,.12);color:#d29922"><i class="ph ph-code"></i></div>
+          <div class="stat-data"><span id="mainLanguage">—</span><label>Top Language</label></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(219,97,162,.12);color:#db61a2"><i class="ph ph-medal"></i></div>
+          <div class="stat-data"><span id="devScore">—</span><label>Dev Score</label></div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-container">
+        <div class="chart-card">
+          <h3><i class="ph ph-chart-pie"></i> Language Distribution</h3>
+          <div class="chart-wrapper"><canvas id="languageChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3><i class="ph ph-chart-bar"></i> Top Repos (Stars vs Forks)</h3>
+          <div class="chart-wrapper"><canvas id="activityChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Repo Filter + List -->
+      <div class="chart-card">
+        <h3><i class="ph ph-funnel"></i> Repository Explorer</h3>
+        <!-- Filter Controls -->
+        <div class="filter-bar" id="filterBar">
+          <div class="filter-group">
+            <label>Language</label>
+            <select id="filterLang">
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Min Stars</label>
+            <input type="number" id="filterStars" min="0" placeholder="0" />
+          </div>
+          <div class="filter-group">
+            <label>Min Forks</label>
+            <input type="number" id="filterForks" min="0" placeholder="0" />
+          </div>
+          <div class="filter-group">
+            <label>Sort By</label>
+            <select id="filterSort">
+              <option value="stars">Stars ↓</option>
+              <option value="forks">Forks ↓</option>
+              <option value="updated">Updated ↓</option>
+              <option value="name">Name A–Z</option>
+            </select>
+          </div>
+          <div class="filter-group filter-toggle">
+            <label>Exclude Forks</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="filterExcludeForks" />
+              <span class="toggle-knob"></span>
+            </label>
+          </div>
+          <button class="filter-reset-btn" onclick="resetFilters()"><i class="ph ph-arrow-counter-clockwise"></i> Reset</button>
+        </div>
+        <div id="repoCount" class="repo-count"></div>
+        <div id="repoList" class="repo-list"></div>
+      </div>
+
+      <!-- Insights -->
+      <div class="insights-row">
+        <div class="insight-card">
+          <h3><i class="ph ph-trophy"></i> Profile Grade</h3>
+          <div class="score-display">
+            <span id="consistencyScore">—</span>
+            <p class="score-label">Based on repos, stars &amp; followers</p>
+          </div>
+        </div>
+        <div class="insight-card suggestion-card">
+          <h3><i class="ph ph-lightbulb"></i> Suggestions</h3>
+          <ul id="suggestionsList"></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== COMPARE MODE ===================== -->
+  <section id="compareMode" class="hidden">
+    <div class="search-section">
+      <h1 class="logo">Compare Developers</h1>
+      <p class="subtitle">Side-by-side analysis of two GitHub profiles.</p>
+      <div class="compare-inputs">
+        <div class="compare-input-wrap">
+          <i class="ph ph-user search-icon"></i>
+          <input id="cmpUser1" type="text" placeholder="First username…" autocomplete="off" />
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="compare-input-wrap">
+          <i class="ph ph-user search-icon"></i>
+          <input id="cmpUser2" type="text" placeholder="Second username…" autocomplete="off" />
+        </div>
+        <button id="compareBtn" onclick="runComparison()"><i class="ph ph-scales"></i> Compare</button>
+      </div>
+      <div class="error-message hidden" id="cmpError">
+        <i class="ph ph-warning-circle"></i><span id="cmpErrorText">Enter both usernames</span>
+      </div>
+    </div>
+
+    <div class="loading hidden" id="cmpLoading">
+      <div class="spinner"></div><p>Fetching profiles…</p>
+    </div>
+
+    <div id="compareResults" class="hidden">
+      <!-- Side-by-side profiles -->
+      <div class="compare-profiles">
+        <div class="cmp-profile-card" id="cmpCard1"></div>
+        <div class="cmp-divider">
+          <div class="cmp-divider-line"></div><span>VS</span><div class="cmp-divider-line"></div>
+        </div>
+        <div class="cmp-profile-card" id="cmpCard2"></div>
+      </div>
+
+      <!-- Winner Banner -->
+      <div class="winner-banner" id="winnerBanner"></div>
+
+      <!-- Head-to-Head Table -->
+      <div class="chart-card">
+        <h3><i class="ph ph-list-numbers"></i> Head-to-Head Stats</h3>
+        <div id="statTable" class="stat-table"></div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="charts-container">
+        <div class="chart-card">
+          <h3><i class="ph ph-chart-bar"></i> Repos · Followers · Stars · Forks</h3>
+          <div class="chart-wrapper"><canvas id="cmpBarChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3><i class="ph ph-translate"></i> Language Overlap</h3>
+          <div class="chart-wrapper"><canvas id="cmpLangChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Radar -->
+      <div class="chart-card radar-card">
+        <h3><i class="ph ph-chart-polar"></i> Profile Radar</h3>
+        <div class="chart-wrapper"><canvas id="cmpRadarChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BATTLE MODE ===================== -->
+  <section id="battleMode" class="hidden">
+    <div class="search-section">
+      <h1 class="logo battle-logo">⚔️ Developer Battle</h1>
+      <p class="subtitle">Round-by-round fight. Who is the ultimate GitHub dev?</p>
+      <div class="compare-inputs">
+        <div class="compare-input-wrap">
+          <i class="ph ph-user search-icon"></i>
+          <input id="btlUser1" type="text" placeholder="Fighter 1…" autocomplete="off" />
+        </div>
+        <div class="vs-badge fire">⚔️</div>
+        <div class="compare-input-wrap">
+          <i class="ph ph-user search-icon"></i>
+          <input id="btlUser2" type="text" placeholder="Fighter 2…" autocomplete="off" />
+        </div>
+        <button id="battleBtn" onclick="runBattle()"><i class="ph ph-sword"></i> Fight!</button>
+      </div>
+      <div class="error-message hidden" id="btlError">
+        <i class="ph ph-warning-circle"></i><span id="btlErrorText">Enter both usernames</span>
+      </div>
+    </div>
+
+    <div class="loading hidden" id="btlLoading">
+      <div class="spinner battle-spinner"></div><p>Summoning fighters…</p>
+    </div>
+
+    <div id="battleArena" class="hidden">
+      <!-- Fighter Cards -->
+      <div class="battle-fighters">
+        <div class="fighter-card" id="fighter1"></div>
+        <div class="battle-vs-center">
+          <div class="battle-vs-text">⚔️</div>
+        </div>
+        <div class="fighter-card" id="fighter2"></div>
+      </div>
+
+      <!-- Score Board -->
+      <div class="scoreboard">
+        <div class="score-side" id="score1">0</div>
+        <div class="score-label-center">SCORE</div>
+        <div class="score-side" id="score2">0</div>
+      </div>
+
+      <!-- Rounds -->
+      <div id="roundsContainer" class="rounds-container"></div>
+
+      <!-- Final Result -->
+      <div id="battleResult" class="battle-result hidden"></div>
+    </div>
+  </section>
+
+  <footer>
+    Built with <i class="ph ph-heart" style="color:#f85149"></i> using the GitHub API &nbsp;·&nbsp;
+    <a href="https://docs.github.com/en/rest" target="_blank">GitHub REST API</a>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
